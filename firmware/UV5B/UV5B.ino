@@ -48,6 +48,9 @@ const int rdaSCLK = 3;
 const int rdaSEN = 4;
 const int rdaPDN = 5;
 
+const int uvMode = 1;
+const int rxAmp = 8;
+
 RDASPI rdaSPI;
 
 #define ADDRESS B0010000
@@ -64,7 +67,11 @@ void setup() {
   Serial.begin(38400);
   // initialize the digital pin as an output.
   pinMode(spkPin, OUTPUT);
+  pinMode(uvMode, OUTPUT);
+  pinMode(rxAmp, OUTPUT);
 
+  digitalWrite(uvMode, HIGH);
+  digitalWrite(rxAmp, HIGH);
 
   pinMode(voiceClk, OUTPUT);
   pinMode(voiceData, OUTPUT);
@@ -257,32 +264,43 @@ void loop() {
         //rdaTx(0x1F, 0xDBE9);
         //rdaTx(0x30, 0x3026);
 
-          rdaTx(0x30, 0x0001); 
-          rdaTx(0x30, 0x0004);
-          rdaTx(0x04, 0x0FD0);
-          rdaTx(0x0B, 0x1A10);
-          rdaTx(0x2B, 0x32C8);
-          rdaTx(0x2C, 0x1964);
-          rdaTx(0x32, 0x627C);
-          rdaTx(0x33, 0x0AF2);
-          rdaTx(0x47, 0x2C2F);
-          rdaTx(0x4E, 0x293A);
-          rdaTx(0x54, 0x1D4C);
-          rdaTx(0x56, 0x0652);
-          rdaTx(0x6E, 0x062D);
-          rdaTx(0x70, 0x1029);
-          rdaTx(0x7F, 0x0001);
-          rdaTx(0x05, 0x001F);
-          rdaTx(0x7F, 0x0000);
-          rdaTx(0x30, 0x3006);
+          rdaSPI.write(0x30, 0x0001); 
+          rdaSPI.write(0x30, 0x0004);
+          rdaSPI.write(0x04, 0x0FD0);
+          rdaSPI.write(0x0B, 0x1A10);
+          rdaSPI.write(0x2B, 0x32C8);
+          rdaSPI.write(0x2C, 0x1964);
+          rdaSPI.write(0x32, 0x627C);
+          rdaSPI.write(0x33, 0x0AF2);
+          rdaSPI.write(0x47, 0x2C2F);
+          rdaSPI.write(0x4E, 0x293A);
+          rdaSPI.write(0x54, 0x1D4C);
+          rdaSPI.write(0x56, 0x0652);
+          rdaSPI.write(0x6E, 0x062D);
+          rdaSPI.write(0x70, 0x1029);
+          rdaSPI.write(0x7F, 0x0001);
+          rdaSPI.write(0x05, 0x001F);
+          rdaSPI.write(0x7F, 0x0000);
+          rdaSPI.write(0x30, 0x3006);
+
 
         break;
       case '4':
         Serial.print("RDA OFF");
-        //rdaTx(0x1F, 0xDBE9, 1);
-        //rdaTx(0x30, 0x3000, 1);
-        delay(10);
-        digitalWrite(rdaPDN, LOW);
+       // //rdaTx(0x1F, 0xDBE9, 1);
+       // //rdaTx(0x30, 0x3000, 1);
+       // delay(10);
+       // digitalWrite(rdaPDN, LOW);
+          delay(3);
+
+          rdaSPI.write(0x30, 0x3006); 
+          rdaSPI.write(0x29, 0x0013);
+          rdaSPI.write(0x2A, 0xD7B0);
+          rdaSPI.write(0x0F, 0x6bE4);
+          rdaSPI.write(0x48, 0x0088);
+          rdaSPI.write(0x49, 0x01B3);
+          rdaSPI.write(0x30, 0x3006);
+          rdaSPI.write(0x30, 0x302E);
         break;
 
 
