@@ -12,13 +12,13 @@
 *10. RDA1846  SEN
 *11. RDA1846 SDIO
 *12. RDA1846 SCLK
-13. RDA1846 GPIO1
+13. RDA1846 GPIO1  (output: radio uses this to indicate a rx signal)
 *14. RDA1846 PDN
-15. RDA1846 GPIO7
+15. RDA1846 GPIO6
 *16. Voice IC (DATA)
 *17. Voice IC (CLK)
-18. RX On?
-19. TX On?
+18. RX On (LED)
+19. TX On (LED)
 20. APC: Freq 15.43 kHz  . Low power 29.7% duty cycle, High Power 56.7% duty cycle
 21. LED Light
 ?22. RDA5802 CLK
@@ -32,6 +32,27 @@
 30. GND
 
 */
+
+//1010  AAAA
+//1011  AAAB
+//1110  AAAE
+
+//To turn of TX amps 1F DEB9
+//To turn of RX amps 1F DBB9
+
+//gpio0 to connector 
+//gpio1 unknown
+//gpio2 unkown
+//gpio3 unknown
+//
+//gpio4 rx amp
+//gpio5 tx amp
+//
+//gpio6 to connector
+//gpio7 turn somthing elase on for sq (amps?)
+
+//0038
+//7BC4
 
 #include <SPI.h>
 #include <Wire.h>
@@ -265,6 +286,258 @@ void loop() {
         //rdaTx(0x30, 0x3026);
 
           rdaSPI.write(0x30, 0x0001); 
+          delay(100);
+          rdaSPI.write(0x30, 0x0004);
+          rdaSPI.write(0x04, 0x0FD0);
+          rdaSPI.write(0x0B, 0x1A10);
+          rdaSPI.write(0x2B, 0x32C8);
+          rdaSPI.write(0x2C, 0x1964);
+          rdaSPI.write(0x32, 0x627C);
+          rdaSPI.write(0x33, 0x0AF2);
+          rdaSPI.write(0x47, 0x2C2F);
+          rdaSPI.write(0x4E, 0x293A);
+          rdaSPI.write(0x54, 0x1D4C);
+          rdaSPI.write(0x56, 0x0652);
+          rdaSPI.write(0x6E, 0x062D);
+          rdaSPI.write(0x70, 0x1029);
+          rdaSPI.write(0x7F, 0x0001);
+          rdaSPI.write(0x05, 0x001F);
+          rdaSPI.write(0x7F, 0x0000);
+          rdaSPI.write(0x30, 0x3006);4
+
+#include <SPI.h>
+#include <Wire.h>
+#include "RDASPI.h"
+const int spkPin = 0;
+
+// the setup() method runs once, when the sketch starts
+
+const int voiceClk = 13;
+const int voiceData = 15;
+
+const int rdaSDIO = 2;
+const int rdaSCLK = 3;
+const int rdaSEN = 4;
+const int rdaPDN = 5;
+
+const int uvMode = 1;
+const int rxAmp = 8;
+
+RDASPI rdaSPI;
+
+#define ADDRESS B0010000
+
+byte getVal(char c)
+{
+  if(c >= '0' && c <= '9')
+    return (byte)(c - '0');
+  else
+    return (byte)(c-'A'+10);
+}
+
+void setup() {
+  Serial.begin(38400);
+  // initialize the digital pin as an output.
+  pinMode(spkPin, OUTPUT);
+  pinMode(uvMode, OUTPUT);
+  pinMode(rxAmp, OUTPUT);
+
+  digitalWrite(uvMode, HIGH);
+  digitalWrite(rxAmp, HIGH);
+
+  pinMode(voiceClk, OUTPUT);
+  pinMode(voiceData, OUTPUT);
+  digitalWrite(voiceClk, LOW);
+  digitalWrite(voiceData, LOW);
+
+  rdaSPI.begin(rdaSDIO, rdaSCLK, rdaSEN, rdaPDN);
+
+  Wire.begin();
+  //Wire.beginTransmission(ADDRESS);
+  //Wire.write(0x90);
+  //Wire.write(0x03);
+  //Wire.write(0x00);
+  //Wire.write(0x18);
+  //Wire.endTransmission();
+
+}
+
+void rdaTx(char addr, int data)
+{
+
+  digitalWrite(rdaSDIO, LOW);
+  digitalWrite(rdaSCLK, LOW);
+  digitalWrite(rdaSEN, LOW);
+
+  delayMicroseconds(8);
+
+
+  //Clk in the address
+  for(int i=0; i<8; i++)
+  {
+    if (addr & 0x80)
+      digitalWrite(rdaSDIO, HIGH);
+    else
+      digitalWrite(rdaSDIO, LOW);
+
+    digitalWrite(rdaSCLK, HIGH);
+    delayMicroseconds(5);
+    digitalWrite(rdaSCLK, LOW);
+    delayMicroseconds(5);
+
+    addr <<= 1;
+  }
+
+  //Clk in the data 
+  for(int i=0; i<16; i++)
+  {
+    if (data & 0x8000)
+      digitalWrite(rdaSDIO, HIGH);
+    else
+      digitalWrite(rdaSDIO, LOW);
+
+    digitalWrite(rdaSCLK, HIGH);
+    delayMicroseconds(5);
+    digitalWrite(rdaSCLK, LOW);
+    delayMicroseconds(5);
+
+    data <<= 1;
+  }
+
+  delayMicroseconds(8);
+  digitalWrite(rdaSCLK, LOW);
+  digitalWrite(rdaSEN, HIGH);
+  delay(1);
+
+}
+
+unsigned short rdaRx(char addr)
+{
+
+  //digitalWrite(rdaSDIO, LOW);
+  //digitalWrite(rdaSCLK, LOW);
+  //digitalWrite(rdaSEN, LOW);
+
+  //delayMicroseconds(8);
+
+
+  ////Clk in the address
+  //for(int i=0; i<8; i++)
+  //{
+  //  if (addr & 0x80)
+  //    digitalWrite(rdaSDIO, HIGH);
+  //  else
+  //    digitalWrite(rdaSDIO, LOW);
+
+  //  digitalWrite(rdaSCLK, HIGH);
+  //  delayMicroseconds(5);
+  //  digitalWrite(rdaSCLK, LOW);
+  //  delayMicroseconds(5);
+
+  //  addr <<= 1;
+  //}
+
+  ////Clk in the data 
+  //for(int i=0; i<16; i++)
+  //{
+  //  if (data & 0x8000)
+  //    digitalWrite(rdaSDIO, HIGH);
+  //  else
+  //    digitalWrite(rdaSDIO, LOW);
+
+  //  digitalWrite(rdaSCLK, HIGH);
+  //  delayMicroseconds(5);
+  //  digitalWrite(rdaSCLK, LOW);
+  //  delayMicroseconds(5);
+
+  //  data <<= 1;
+  //}
+
+  //delayMicroseconds(8);
+  //digitalWrite(rdaSCLK, LOW);
+  //digitalWrite(rdaSEN, HIGH);
+  //delay(1);
+
+}
+
+void SPItransfer(char d)
+{
+
+  digitalWrite(voiceClk, HIGH);
+  digitalWrite(voiceData, LOW);
+  delay(6);
+
+  for(int i=0; i<8; i++)
+  {
+    if (d & 0x80)
+      digitalWrite(voiceData, HIGH);
+    else
+      digitalWrite(voiceData, LOW);
+
+    digitalWrite(voiceClk, LOW);
+    delay(1);
+    digitalWrite(voiceClk, HIGH);
+    delay(1);
+
+    d <<= 1;
+  }
+
+
+  digitalWrite(voiceData, LOW);
+  digitalWrite(voiceClk, LOW);
+
+
+}
+
+/*
+ * FM Radio init
+ * Write: to 0x10 0xC0 0x01
+ * Write: 0x10 c0 01 00 
+ *
+ * Status:
+ * 0x10 1 0x44 0xf6 0x06 0x1f
+ * 0x10 1 0x44 0xfb 0x83 0x1f
+ * 0x10 1 0x44 0xf6 0x06 0x1f
+ *
+ */
+
+int ch = 0x2718;
+int voiceCmd = 0x60;
+void loop() {
+
+
+
+  if (Serial.available() > 0)
+  {
+    unsigned char cmd = Serial.read();
+    int mute = 0;
+
+    switch(cmd)
+    {
+      case '1':
+        Serial.println("Turning SPK on");
+        digitalWrite(spkPin, HIGH);
+        break;
+      case '0':
+        Serial.println("Turning SPK off");
+        digitalWrite(spkPin, LOW);
+        break;
+      case '2':
+        Serial.print("Send to voice ");
+        Serial.println(voiceCmd);
+        SPItransfer(voiceCmd);
+        voiceCmd++;
+
+        break;
+      case '3':
+        digitalWrite(rdaPDN, HIGH);
+        delay(10);
+        Serial.print("RDA ON");
+        //rdaTx(0x1F, 0xDBE9);
+        //rdaTx(0x30, 0x3026);
+
+          rdaSPI.write(0x30, 0x0001); 
+          delay(100);
           rdaSPI.write(0x30, 0x0004);
           rdaSPI.write(0x04, 0x0FD0);
           rdaSPI.write(0x0B, 0x1A10);
@@ -284,6 +557,145 @@ void loop() {
           rdaSPI.write(0x30, 0x3006);
 
 
+          //rdaSPI.write(0x0B, 0x1A10); 
+          //rdaSPI.write(0x32, 0x627C);
+          //rdaSPI.write(0x33, 0x0AF2);
+          //rdaSPI.write(0x47, 0x1AEA);
+          //rdaSPI.write(0x54, 0x114A);
+          //rdaSPI.write(0x56, 0x0652);
+          //rdaSPI.write(0x71, 0x6A1E);
+          //rdaSPI.write(0x2B, 0x32C8);
+          //rdaSPI.write(0x2C, 0x1964);
+          //rdaSPI.write(0x2D, 0x0000);
+          //rdaSPI.write(0x1F, 0x1011);
+          //rdaSPI.write(0x44, 0x00FC);
+          //rdaSPI.write(0x04, 0x0FD1);
+          //rdaSPI.write(0x0A, 0x0420);
+          //rdaSPI.write(0x24, 0xE000);
+          //rdaSPI.write(0x4E, 0x293A);
+          //rdaSPI.write(0x66, 0x615E);
+          //rdaSPI.write(0x67, 0x574B);
+          //rdaSPI.write(0x68, 0x311E);
+          //rdaSPI.write(0x69, 0x0FFB);
+          //rdaSPI.write(0x7F, 0x0001);
+          //rdaSPI.write(0x05, 0x0018);
+          //rdaSPI.write(0x7F, 0x0000);
+          //rdaSPI.write(0x30, 0x0006);
+          //rdaSPI.write(0x47, 0x1AEA);
+          //rdaSPI.write(0x54, 0x1D40);
+          //rdaSPI.write(0x56, 0x0652);
+          //rdaSPI.write(0x71, 0x6C1E);
+          //rdaSPI.write(0x30, 0x0006);
+          //rdaSPI.write(0x47, 0x2C2F);
+          //rdaSPI.write(0x6E, 0x062D);
+          //rdaSPI.write(0x70, 0x1029);
+
+          //delay(100);
+
+
+          //rdaSPI.write(0x04, 0x0FD0);
+          //rdaSPI.write(0x11, 0x3E37);
+          //rdaSPI.write(0x54, 0x1D4C);
+          //delay(100);
+
+          //rdaSPI.write(0x32, 0x62BC);
+          //rdaSPI.write(0x0F, 0x00E4);
+          //rdaSPI.write(0x29, 0x0011);
+          //rdaSPI.write(0x2A, 0xC3A8);
+          //rdaSPI.write(0x30, 0x3006);
+          //rdaSPI.write(0x1F, 0xDBB9);
+          //rdaSPI.write(0x4B, 0x0065);
+          //rdaSPI.write(0x4B, 0x0065);
+          //rdaSPI.write(0x4A, 0x0E14);
+          //rdaSPI.write(0x45, 0x0A85);
+
+
+          //delay(100);
+          //rdaSPI.write(0x48, 0x00C6);
+          //rdaSPI.write(0x49, 0x00C2);
+          //rdaSPI.write(0x47, 0x2C2F);
+          //rdaSPI.write(0x6E, 0x062D);
+          //rdaSPI.write(0x70, 0x1029);
+          //rdaSPI.write(0x54, 0x1D4C);
+          //rdaSPI.write(0x30, 0x3006);
+
+          //delay(100);
+
+          //rdaSPI.write(0x30, 0x30A6);
+
+          Serial.println("RDA rx init");
+
+
+
+          //rdaSPI.write(0x0B, 0x1A10); 
+          //rdaSPI.write(0x32, 0x627C);
+          //rdaSPI.write(0x33, 0x0AF2);
+          //rdaSPI.write(0x47, 0x1AEA);
+          //rdaSPI.write(0x54, 0x114A);
+          //rdaSPI.write(0x56, 0x0652);
+          //rdaSPI.write(0x71, 0x6A1E);
+          //rdaSPI.write(0x2B, 0x32C8);
+          //rdaSPI.write(0x2C, 0x1964);
+          //rdaSPI.write(0x2D, 0x0000);
+          //rdaSPI.write(0x1F, 0x1011);
+          //rdaSPI.write(0x44, 0x00FC);
+          //rdaSPI.write(0x04, 0x0FD1);
+          //rdaSPI.write(0x0A, 0x0420);
+          //rdaSPI.write(0x24, 0xE000);
+          //rdaSPI.write(0x4E, 0x293A);
+          //rdaSPI.write(0x66, 0x615E);
+          //rdaSPI.write(0x67, 0x574B);
+          //rdaSPI.write(0x68, 0x311E);
+          //rdaSPI.write(0x69, 0x0FFB);
+          //rdaSPI.write(0x7F, 0x0001);
+          //rdaSPI.write(0x05, 0x0018);
+          //rdaSPI.write(0x7F, 0x0000);
+          //rdaSPI.write(0x30, 0x0006);
+          //rdaSPI.write(0x47, 0x1AEA);
+          //rdaSPI.write(0x54, 0x1D40);
+          //rdaSPI.write(0x56, 0x0652);
+          //rdaSPI.write(0x71, 0x6C1E);
+          //rdaSPI.write(0x30, 0x0006);
+          //rdaSPI.write(0x47, 0x2C2F);
+          //rdaSPI.write(0x6E, 0x062D);
+          //rdaSPI.write(0x70, 0x1029);
+
+          //delay(100);
+
+
+          //rdaSPI.write(0x04, 0x0FD0);
+          //rdaSPI.write(0x11, 0x3E37);
+          //rdaSPI.write(0x54, 0x1D4C);
+          //delay(100);
+
+          //rdaSPI.write(0x32, 0x62BC);
+          //rdaSPI.write(0x0F, 0x00E4);
+          //rdaSPI.write(0x29, 0x0011);
+          //rdaSPI.write(0x2A, 0xC3A8);
+          //rdaSPI.write(0x30, 0x3006);
+          //rdaSPI.write(0x1F, 0xDBB9);
+          //rdaSPI.write(0x4B, 0x0065);
+          //rdaSPI.write(0x4B, 0x0065);
+          //rdaSPI.write(0x4A, 0x0E14);
+          //rdaSPI.write(0x45, 0x0A85);
+
+
+          //delay(100);
+          //rdaSPI.write(0x48, 0x00C6);
+          //rdaSPI.write(0x49, 0x00C2);
+          //rdaSPI.write(0x47, 0x2C2F);
+          //rdaSPI.write(0x6E, 0x062D);
+          //rdaSPI.write(0x70, 0x1029);
+          //rdaSPI.write(0x54, 0x1D4C);
+          //rdaSPI.write(0x30, 0x3006);
+
+          //delay(100);
+
+          //rdaSPI.write(0x30, 0x30A6);
+
+          Serial.println("RDA rx init");
+
+
         break;
       case '4':
         Serial.print("RDA OFF");
@@ -294,8 +706,11 @@ void loop() {
           delay(3);
 
           rdaSPI.write(0x30, 0x3006); 
-          rdaSPI.write(0x29, 0x0013);
-          rdaSPI.write(0x2A, 0xD7B0);
+          rdaSPI.write(0x1F, 0xDBB9); 
+          //rdaSPI.write(0x29, 0x0013);
+          //rdaSPI.write(0x2A, 0xD7B0);
+          rdaSPI.write(0x29, 0x0011);
+          rdaSPI.write(0x2A, 0xC3A8);
           rdaSPI.write(0x0F, 0x6bE4);
           rdaSPI.write(0x48, 0x0088);
           rdaSPI.write(0x49, 0x01B3);
